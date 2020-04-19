@@ -1,0 +1,123 @@
+def path
+def artifact_path
+echo 'Define environment variable'
+pipeline{
+    agent any
+    echo'whenever we push code to repository this trigger will work'
+    options([[$class: 'GithubProjectProperty', displayName: 'my java', projectUrlStr: 'https://github.com/yadavhemant1802/my-app.git/'],pipelineTriggers([githubPush()])])
+    
+    tools { 
+        maven 'M2_HOME' 
+        jdk 'JAVA_HOME'
+        
+    }
+    echo'Tools are used for pipeline'
+    environment {
+        M2_HOME = tool name: 'M2_HOME', type: 'maven'
+        Python = tool name: 'Python35', type: 'jenkins.plugins.shiningpanda.tools.PythonInstallation'
+    }
+    
+    stages{
+        stage("SCM Checkout"){
+            steps{
+                script{
+                    echo'Taking user input to checkout the repository '
+                    path = input id: 'Input_id', message: 'Target path for build',
+                    ok: 'Procced', parameters: [string(defaultValue: 'C:\\Program Files (x86)\\Jenkins\\workspace\\codeaspipeline',
+                    description: '', name: 'Target_Path', trim: true)]
+                        
+                    println(Target_Path);
+                    println(path);
+                    echo'change the directory to copy all file'
+                    dir("${path}"){
+                         git credentialsId: 'githubmy', url: 'https://github.com/yadavhemant1802/my-app.git'  
+                    }
+                }
+                
+               
+                
+                
+              
+              
+            }
+        }
+        
+        stage("compile"){
+             
+            
+            steps{
+                dir("${path}"){
+                         bat label: '', script: 'mvn clean compile'  
+                }
+             
+              
+              
+             
+              
+            }
+        }
+        
+        stage("Build"){
+             
+            
+            steps{
+             echo'we are creating jar file'
+             dir("${path}"){
+                         echo'we are using python script to create folder for every build with timestamp and copy the jar file into folder'
+                         bat label: '', script: 'mvn package'
+                         bat 'python create_directory.py'
+             }
+              
+             
+              
+            }
+        }
+        stage("Test"){
+             
+            
+            steps{
+             
+               dir("${path}"){
+                         bat label: '', script: 'mvn test'  
+               } 
+              
+            }
+              post {
+                 always {
+                     dir("${path}"){
+                         junit 'target/surefire-reports/*.xml' 
+                     }
+                     
+                 }
+              }
+        }
+        
+        stage("Deploy"){
+             
+            
+            steps{
+             
+             dir("${path}"){
+                 echo'copy jar file to user defined path using python script'
+                 script{
+                    artifact_path = input id: 'Input_id1', message: 'Target path for Articat',
+                    ok: 'Procced', parameters: [string(defaultValue: 'C:\\Program Files (x86)\\Jenkins\\workspace\\codeaspipeline',
+                    description: '', name: 'Artifact_Target_Path', trim: true)]
+                    println(artifact_path);
+                    bat "python artifactmove.py ${artifact_path}" 
+                    
+                
+                }
+                         
+                         
+             }
+              
+             
+              
+            }
+        }
+        
+        
+    }
+}
+   

@@ -1,0 +1,34 @@
+---
+- hosts: app
+  remote_user: root
+  sudo: yes
+  vars:
+    download_url: https://download.oracle.com/otn-pub/java/jdk/14.0.1+7/664493ef4a6946b186ff29eb326336a2/jdk-14.0.1_osx-x64_bin.tar.gz
+    download_folder: /opt
+    java_name: "{{download_folder}}/jdk1.8.0_05"
+    java_archive: "{{download_folder}}/jdk-14.0.1_osx-x64_bin.tar.gz"
+
+  tasks:
+  - name: Fetch a info file
+    fetch: src=C:\Program Files (x86)\Jenkins\workspace dest=/home/user/info.txt flat=yes 
+  tasks:
+  - name: Download Java
+    command: "wget -q -O {{java_archive}} --no-check-certificate --no-cookies --header 'Cookie: oraclelicense=accept-securebackup-cookie' {{download_url}} creates={{java_archive}}"
+
+  - name: Unpack archive
+    command: "tar -zxf {{java_archive}} -C {{download_folder}} creates={{java_name}}"
+
+  - name: Fix ownership
+    file: state=directory path={{java_name}} owner=root group=root recurse=yes
+
+  - name: Make Java available for system
+    command: 'alternatives --install "/usr/bin/java" "java" "{{java_name}}/bin/java" 2000'
+
+  - name: Clean up
+    file: state=absent path={{java_archive}}
+  tasks:
+  - shell: echo JAVA_HOME is $JAVA_HOME
+    environment:
+      JAVA_HOME: /usr/java/jdk-14.0.1
+    register: shellout
+  - debug: var=shellout
